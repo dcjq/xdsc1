@@ -618,15 +618,43 @@ body {
 .file-name {
   font-size: 14px;
   font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  word-break: break-all;
+  line-height: 1.4;
 }
 
 .file-size {
   font-size: 12px;
   color: var(--text-light);
   margin-top: 2px;
+}
+
+.file-badge {
+  display: inline-block;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  margin-left: 4px;
+  vertical-align: middle;
+  font-weight: normal;
+  white-space: nowrap;
+}
+
+.file-badge-ok {
+  background: #f6ffed;
+  color: #52c41a;
+  border: 1px solid #b7eb8f;
+}
+
+.file-badge-warn {
+  background: #fffbe6;
+  color: #faad14;
+  border: 1px solid #ffe58f;
+}
+
+.file-badge-err {
+  background: #fff2f0;
+  color: #ff4d4f;
+  border: 1px solid #ffccc7;
 }
 
 .file-delete {

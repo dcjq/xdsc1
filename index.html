@@ -7,6 +7,10 @@
   <title>银行信贷审查审批系统</title>
   <link rel="stylesheet" href="style.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏦</text></svg>">
+  <!-- 文件解析库：PDF / Word / Excel 浏览器端解析 -->
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
   <div id="app">
@@ -15,6 +19,12 @@
       <div style="margin-top:12px;">正在加载...</div>
     </div>
   </div>
+  <script>
+    // 配置 pdf.js worker
+    if (window.pdfjsLib) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+    }
+  </script>
   <script src="ai-engine.js"></script>
   <script src="app.js"></script>
 </body>

@@ -418,6 +418,18 @@ const FileUtil = {
   },
 
   /**
+   * 读取文件为 ArrayBuffer
+   */
+  readAsArrayBuffer(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = e => resolve(e.target.result);
+      reader.onerror = e => reject(new Error('文件读取失败'));
+      reader.readAsArrayBuffer(file);
+    });
+  },
+
+  /**
    * 判断是否为文本类文件
    */
   isTextFile(file) {
@@ -425,6 +437,69 @@ const FileUtil = {
     const textExts = ['.txt', '.csv', '.md', '.json', '.log'];
     if (textTypes.includes(file.type)) return true;
     return textExts.some(ext => file.name.toLowerCase().endsWith(ext));
+  },
+
+  /**
+   * 判断文件类型
+   */
+  getFileKind(file) {
+    const name = (file.name || '').toLowerCase();
+    const type = file.type || '';
+    if (type.startsWith('image/') || /\.(jpg|jpeg|png|gif|bmp|webp|tiff?)$/.test(name)) return 'image';
+    if (type === 'application/pdf' || name.endsWith('.pdf')) return 'pdf';
+    if (name.endsWith('.docx')) return 'docx';
+    if (name.endsWith('.doc')) return 'doc';
+    if (name.endsWith('.xlsx') || name.endsWith('.xlsm')) return 'xlsx';
+    if (name.endsWith('.xls')) return 'xls';
+    if (this.isTextFile(file)) return 'text';
+    return 'unknown';
+  },
+
+  /**
+   * 解析 PDF 文件（使用 pdf.js）
+   */
+  async parsePDF(file) {
+    if (!window.pdfjsLib) throw new Error('PDF 解析库未加载，请检查网络');
+    const arrayBuffer = await this.readAsArrayBuffer(file);
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let text = '';
+    const maxPages = Math.min(pdf.numPages, 50); // 限制最多解析50页
+    for (let i = 1; i <= maxPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const pageText = content.items.map(item => item.str).join(' ');
+      text += `--- 第${i}页 ---\n${pageText}\n\n`;
+    }
+    if (pdf.numPages > maxPages) {
+      text += `\n... (共${pdf.numPages}页，仅解析前${maxPages}页)`;
+    }
+    return text.trim() || '[PDF 文件无可提取文本，可能是扫描件，需 OCR 处理]';
+  },
+
+  /**
+   * 解析 Word (.docx) 文件（使用 mammoth.js）
+   */
+  async parseDocx(file) {
+    if (!window.mammoth) throw new Error('Word 解析库未加载，请检查网络');
+    const arrayBuffer = await this.readAsArrayBuffer(file);
+    const result = await mammoth.extractRawText({ arrayBuffer });
+    return result.value.trim() || '[Word 文件无可提取文本]';
+  },
+
+  /**
+   * 解析 Excel 文件（使用 SheetJS / xlsx）
+   */
+  async parseExcel(file) {
+    if (!window.XLSX) throw new Error('Excel 解析库未加载，请检查网络');
+    const arrayBuffer = await this.readAsArrayBuffer(file);
+    const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+    let text = '';
+    for (const sheetName of workbook.SheetNames) {
+      const sheet = workbook.Sheets[sheetName];
+      const csv = XLSX.utils.sheet_to_csv(sheet, { FS: '\t' });
+      text += `=== 工作表：${sheetName} ===\n${csv}\n\n`;
+    }
+    return text.trim() || '[Excel 文件无可提取数据]';
   },
 
   /**

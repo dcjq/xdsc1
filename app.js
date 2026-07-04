@@ -32,8 +32,13 @@ const util = {
     return 'task_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
   },
   getFileIcon(filename) {
-    const ext = filename.split('.').pop().toLowerCase();
-    const map = { pdf: '📄', doc: '📝', docx: '📝', jpg: '🖼️', jpeg: '🖼️', png: '🖼️' };
+    const ext = (filename || '').split('.').pop().toLowerCase();
+    const map = {
+      pdf: '📄', doc: '📝', docx: '📝',
+      xls: '📊', xlsx: '📊', xlsm: '📊', csv: '📊',
+      jpg: '🖼️', jpeg: '🖼️', png: '🖼️', gif: '🖼️', bmp: '🖼️', webp: '🖼️', tiff: '🖼️', tif: '🖼️',
+      txt: '📃', md: '📃', json: '📃', log: '📃'
+    };
     return map[ext] || '📋';
   },
   getRiskColor(level) {
@@ -148,20 +153,45 @@ const fileStore = {
 };
 
 const api = {
-  // 文件"上传"：浏览器本地读取，存到 localStorage
+  // 文件"上传"：浏览器本地解析文件内容，存到 localStorage
   async uploadFiles(file, taskId) {
     let content = '';
+    let parseStatus = 'success'; // success / unsupported / failed
     try {
-      if (FileUtil.isTextFile(file)) {
-        content = await FileUtil.readAsText(file);
-        if (content.length > 50000) content = content.slice(0, 50000) + '\n... (内容已截断)';
-      } else if (file.type.startsWith('image/')) {
-        content = `[图片文件：${file.name}，演示模式下不解析图片内容]`;
-      } else {
-        content = `[文件：${file.name}，类型：${file.type || '未知'}，演示模式下仅解析文本类文件]`;
+      const kind = FileUtil.getFileKind(file);
+      switch (kind) {
+        case 'text':
+          content = await FileUtil.readAsText(file);
+          break;
+        case 'pdf':
+          content = await FileUtil.parsePDF(file);
+          break;
+        case 'docx':
+          content = await FileUtil.parseDocx(file);
+          break;
+        case 'doc':
+          content = `[旧版 Word 文件：${file.name}，浏览器暂不支持 .doc 格式解析，请另存为 .docx 后上传]`;
+          parseStatus = 'unsupported';
+          break;
+        case 'xlsx':
+        case 'xls':
+          content = await FileUtil.parseExcel(file);
+          break;
+        case 'image':
+          content = `[图片文件：${file.name}（${FileUtil.formatSize(file.size)}），文本类分析暂不支持图片内容识别，如需识别可转为文本上传]`;
+          parseStatus = 'unsupported';
+          break;
+        default:
+          content = `[未识别文件类型：${file.name}，可尝试上传，但可能无法解析内容]`;
+          parseStatus = 'unsupported';
+      }
+      // 截断过长内容，防止 localStorage 溢出
+      if (content && content.length > 80000) {
+        content = content.slice(0, 80000) + '\n\n... (内容已截断，共' + content.length + '字符)';
       }
     } catch (e) {
-      content = `[文件读取失败：${e.message}]`;
+      content = `[文件解析失败：${e.message}]`;
+      parseStatus = 'failed';
     }
     const files = fileStore.get(taskId);
     const record = {
@@ -169,6 +199,8 @@ const api = {
       fileName: file.name,
       size: file.size,
       mimeType: file.type || 'unknown',
+      kind: FileUtil.getFileKind(file),
+      parseStatus,
       content,
       uploadTime: new Date().toISOString()
     };
@@ -601,7 +633,7 @@ function renderUpload() {
     <div class="upload-area" id="uploadArea">
       <div class="upload-icon">📎</div>
       <div class="upload-text">点击上传信贷材料</div>
-      <div class="upload-hint">支持所有文件类型（文本、图片、PDF、Word、Excel 等）</div>
+      <div class="upload-hint">支持 PDF / Word / Excel / 图片 / 文本等所有格式</div>
       <div class="upload-formats">信贷调查报告 | 审计报告 | 营业执照 | 财务报表 | 购销合同</div>
     </div>
 
@@ -673,15 +705,22 @@ async function loadFileList(taskId) {
             <div class="section-title" style="margin-left:0;">已上传材料 (${files.length})</div>
           </div>
           <div style="padding:0 16px;">
-            ${files.map(f => `
+            ${files.map(f => {
+              const fname = f.fileName || f.originalName || f.filename || '未知文件';
+              const statusBadge = f.parseStatus === 'success'
+                ? '<span class="file-badge file-badge-ok">已解析</span>'
+                : f.parseStatus === 'failed'
+                  ? '<span class="file-badge file-badge-err">解析失败</span>'
+                  : '<span class="file-badge file-badge-warn">仅记录</span>';
+              return `
               <div class="file-item">
-                <div class="file-icon">${util.getFileIcon(f.fileName || f.originalName || f.filename || '')}</div>
+                <div class="file-icon">${util.getFileIcon(fname)}</div>
                 <div class="file-info">
-                  <div class="file-name">${util.escapeHtml(f.fileName || f.originalName || f.filename || '未知文件')}</div>
+                  <div class="file-name">${util.escapeHtml(fname)} ${statusBadge}</div>
                   <div class="file-size">${util.formatFileSize(f.size)} · ${util.formatDate(new Date(f.uploadTime).getTime(), 'MM-DD HH:mm')}</div>
                 </div>
               </div>
-            `).join('')}
+            `;}).join('')}
           </div>
         `;
         document.getElementById('actionSection').style.display = 'block';
