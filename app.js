@@ -597,13 +597,13 @@ function renderUpload() {
       </div>
     </div>
 
-    <div class="upload-area" id="uploadArea">
+    <label class="upload-area" id="uploadArea" for="fileInput">
       <div class="upload-icon">📎</div>
       <div class="upload-text">点击或拖拽上传信贷材料</div>
-      <div class="upload-hint">支持 PDF、Word、图片</div>
+      <div class="upload-hint">支持所有文件类型（文本、图片、PDF、Word、Excel 等）</div>
       <div class="upload-formats">信贷调查报告 | 审计报告 | 营业执照 | 财务报表 | 购销合同</div>
-      <input type="file" id="fileInput" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt,.xls,.xlsx" style="display:none;">
-    </div>
+      <input type="file" id="fileInput" multiple style="display:none;">
+    </label>
 
     <div id="fileSection"></div>
 
@@ -625,8 +625,7 @@ function renderUpload() {
   const uploadArea = document.getElementById('uploadArea');
   const fileInput = document.getElementById('fileInput');
 
-  uploadArea.addEventListener('click', () => fileInput.click());
-
+  // label 标签原生会触发 fileInput，这里额外处理拖拽
   uploadArea.addEventListener('dragover', (e) => {
     e.preventDefault();
     uploadArea.classList.add('dragover');
@@ -668,9 +667,9 @@ async function loadFileList(taskId) {
           <div style="padding:0 16px;">
             ${files.map(f => `
               <div class="file-item">
-                <div class="file-icon">${util.getFileIcon(f.filename)}</div>
+                <div class="file-icon">${util.getFileIcon(f.fileName || f.originalName || f.filename || '')}</div>
                 <div class="file-info">
-                  <div class="file-name">${util.escapeHtml(f.filename)}</div>
+                  <div class="file-name">${util.escapeHtml(f.fileName || f.originalName || f.filename || '未知文件')}</div>
                   <div class="file-size">${util.formatFileSize(f.size)} · ${util.formatDate(new Date(f.uploadTime).getTime(), 'MM-DD HH:mm')}</div>
                 </div>
               </div>
