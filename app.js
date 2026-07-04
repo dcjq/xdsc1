@@ -597,13 +597,13 @@ function renderUpload() {
       </div>
     </div>
 
-    <label class="upload-area" id="uploadArea" for="fileInput">
+    <input type="file" id="fileInput" multiple style="position:absolute;opacity:0;width:0;height:0;overflow:hidden;pointer-events:none;">
+    <div class="upload-area" id="uploadArea">
       <div class="upload-icon">📎</div>
-      <div class="upload-text">点击或拖拽上传信贷材料</div>
+      <div class="upload-text">点击上传信贷材料</div>
       <div class="upload-hint">支持所有文件类型（文本、图片、PDF、Word、Excel 等）</div>
       <div class="upload-formats">信贷调查报告 | 审计报告 | 营业执照 | 财务报表 | 购销合同</div>
-      <input type="file" id="fileInput" multiple style="display:none;">
-    </label>
+    </div>
 
     <div id="fileSection"></div>
 
@@ -625,7 +625,14 @@ function renderUpload() {
   const uploadArea = document.getElementById('uploadArea');
   const fileInput = document.getElementById('fileInput');
 
-  // label 标签原生会触发 fileInput，这里额外处理拖拽
+  // 点击上传区域 → 触发文件选择器
+  uploadArea.addEventListener('click', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    fileInput.click();
+  });
+
+  // 拖拽上传
   uploadArea.addEventListener('dragover', (e) => {
     e.preventDefault();
     uploadArea.classList.add('dragover');
@@ -639,8 +646,9 @@ function renderUpload() {
     }
   });
 
+  // 文件选择回调
   fileInput.addEventListener('change', (e) => {
-    if (e.target.files.length > 0) {
+    if (e.target.files && e.target.files.length > 0) {
       uploadFiles(Array.from(e.target.files), taskId);
       fileInput.value = '';
     }

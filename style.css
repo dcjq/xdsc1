@@ -545,6 +545,9 @@ body {
   cursor: pointer;
   transition: all 0.2s;
   touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .upload-area:hover {
